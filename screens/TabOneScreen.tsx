@@ -18,6 +18,7 @@ export default function TabOneScreen({
   const [sessionTimeout, setSessionTimeout] = useState<number>(0); // Session timeout is currently set to 5 min
   const [session, setSession] = useState<object | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
+  const [isTyping, setisTyping] = useState(false);
 
   type sessionKey = keyof typeof session;
   const session_id = "session_id" as sessionKey;
@@ -101,59 +102,6 @@ export default function TabOneScreen({
     }
   };
 
-  // convert watson response into a message
-  const convertWatsonResponse = (watsonOutput: any) => {
-    console.log("Watson Generic" + JSON.stringify(watsonOutput["generic"]));
-    // Display each response_type and options
-    if (watsonOutput["generic"]) {
-      watsonOutput["generic"].forEach((response: any) => {
-        if (response["response_type"] === "text") {
-          let message = [
-            {
-              _id: Math.round(Math.random() * 1000000),
-              text: `${response["text"]}`,
-              createdAt: new Date(),
-              user: {
-                _id: 2,
-                name: "Watson Assistant",
-                avatar: require("../assets/images/watson.png"),
-              },
-            },
-          ];
-          setMessages((previousMessages) =>
-            GiftedChat.append(previousMessages, message)
-          );
-        }
-        if (response["response_type"] === "option") {
-          let options = response["options"].map((option: any) => ({
-            title: option["label"],
-            value: option["value"].input.text,
-          }));
-          console.log("Looking in Options" + JSON.stringify(options));
-          let message = [
-            {
-              _id: Math.round(Math.random() * 1000000),
-              text: `${response["title"]}`,
-              createdAt: new Date(),
-              quickReplies: {
-                type: "radio",
-                values: options,
-              },
-              user: {
-                _id: 2,
-                name: "Watson Assistant",
-                avatar: require("../assets/images/watson.png"),
-              },
-            },
-          ];
-          setMessages((previousMessages) =>
-            GiftedChat.append(previousMessages, message)
-          );
-        }
-      });
-    }
-  };
-
   // Get watson assistant reply
   async function fetchWatsonResponse(
     sessionTime: number,
@@ -207,6 +155,84 @@ export default function TabOneScreen({
     }
   }
 
+  const displayResponses = () => {
+
+  }
+
+  // convert watson response into a message
+  const convertWatsonResponse = (watsonOutput: any) => {
+    let isPausing = false;
+    console.log("Watson Generic" + JSON.stringify(watsonOutput["generic"]));
+    // Display each response_type and options
+    if (watsonOutput["generic"]) {
+      let index = 0;
+      while (index < watsonOutput["generic"].length) {
+        if (isPausing) {
+          continue;
+        }
+        const response = watsonOutput["generic"][index]
+        switch(response['response_type']) {
+          case "text":
+            let textMessage = [
+              {
+                _id: Math.round(Math.random() * 1000000),
+                text: `${response["text"]}`,
+                createdAt: new Date(),
+                user: {
+                  _id: 2,
+                  name: "Watson Assistant",
+                  avatar: require("../assets/images/watson.png"),
+                },
+              },
+            ];
+            setMessages((previousMessages) =>
+              GiftedChat.append(previousMessages, textMessage)
+            );
+            break;
+          case "option":
+            let options = response["options"].map((option: any) => ({
+              title: option["label"],
+              value: option["value"].input.text,
+            }));
+            console.log("Looking in Options" + JSON.stringify(options));
+            let messageOptions = [
+              {
+                _id: Math.round(Math.random() * 1000000),
+                text: `${response["title"]}`,
+                createdAt: new Date(),
+                quickReplies: {
+                  type: "radio",
+                  values: options,
+                },
+                user: {
+                  _id: 2,
+                  name: "Watson Assistant",
+                  avatar: require("../assets/images/watson.png"),
+                },
+              },
+            ];
+            setMessages((previousMessages) =>
+              GiftedChat.append(previousMessages, messageOptions)
+            );
+            break;
+            case "pause":
+              setisTyping(true)
+              isPausing = true;
+              setTimeout(() => {
+                setisTyping(false)
+                isPausing = false;
+              }, 3000);
+              break;
+            default: 
+              console.log('No Response Types');
+              break;
+        }
+        index++;
+      };
+    }
+  };
+
+
   const sendMessage = (messages: any) => {
     console.log(`sendMessage() messages: ${JSON.stringify(messages)}`);
     setMessages((previousMessages) =>
@@ -256,6 +282,7 @@ export default function TabOneScreen({
         onSend={(messages) => sendMessage(messages)}
         onQuickReply={(quickReply) => sendQuickReply(quickReply)}
         user={{ _id: 1 }}
+        isTyping={isTyping}
       />
     </View>
   );
