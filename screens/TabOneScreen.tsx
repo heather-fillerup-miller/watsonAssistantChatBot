@@ -3,6 +3,7 @@ import { Avatar } from "react-native-elements";
 import {
   ActivityIndicator,
   Button,
+  Image,
   StyleSheet,
   TextInput,
   TouchableOpacity,
@@ -32,22 +33,20 @@ export default function TabOneScreen({
       headerRight: () => (
         <View style={{ marginLeft: 20 }}>
           <Avatar
+            size='small'
             rounded
             source={require("../assets/images/member1.png")}
           ></Avatar>
         </View>
       ),
       headerLeft: () => (
-        <View>
-          <TouchableOpacity
-            style={{
-              marginRight: 10,
-            }}
-            onPress={deleteSession}
-          >
-            {!session && <Text>Session Not Active</Text>}
-            {session && <Text>Delete SessionID</Text>}
-          </TouchableOpacity>
+        <View style={{
+          marginRight: 10,
+        }}>
+          <Image
+            style={{width: 150, height: 44}}
+            source={require("../assets/images/highmarkHealth.png")}
+          ></Image>
         </View>
       ),
     });
@@ -130,7 +129,7 @@ export default function TabOneScreen({
           const output = "output" as ObjectKey;
           let watsonOutput = watsonResult[output];
           if (watsonOutput) {
-            convertWatsonResponse(watsonOutput);
+            convertWatsonResponse(watsonOutput, true);
           }
         }
       } catch (error) {
@@ -152,6 +151,7 @@ export default function TabOneScreen({
       setMessages(message);
       setSession(null);
       setLoading(true);
+      fetchSession();
     }
   }
 
@@ -297,9 +297,9 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
   },
-  separator: {
-    marginVertical: 30,
-    height: 1,
-    width: "80%",
-  },
+  // separator: {
+  //   // marginVertical: 30,
+  //   height: 1,
+  //   width: "80%",
+  // },
 });
