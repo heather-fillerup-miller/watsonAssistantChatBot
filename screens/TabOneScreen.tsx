@@ -160,17 +160,19 @@ export default function TabOneScreen({
   }
 
   // convert watson response into a message
-  const convertWatsonResponse = (watsonOutput: any) => {
-    let isPausing = false;
-    console.log("Watson Generic" + JSON.stringify(watsonOutput["generic"]));
-    // Display each response_type and options
-    if (watsonOutput["generic"]) {
-      let index = 0;
-      while (index < watsonOutput["generic"].length) {
-        if (isPausing) {
-          continue;
+  const convertWatsonResponse = (watsonOutput: any, firstRun: boolean) => {
+    let breakout = false;
+    var target = watsonOutput;
+    if (firstRun) {
+      target = watsonOutput["generic"]
+    }
+
+    if (target) {
+      for (let i = 0; i < target.length; i++) {
+        if (breakout) {
+          break;
         }
-        const response = watsonOutput["generic"][index]
+        const response = target[i]
         switch(response['response_type']) {
           case "text":
             let textMessage = [
@@ -216,19 +218,18 @@ export default function TabOneScreen({
             );
             break;
             case "pause":
+              breakout = true;
               setisTyping(true)
-              isPausing = true;
               setTimeout(() => {
                 setisTyping(false)
-                isPausing = false;
+                convertWatsonResponse(target.slice(i + 1), false)
               }, 3000);
               break;
             default: 
               console.log('No Response Types');
               break;
         }
-        index++;
-      };
+      }
     }
   };
 
