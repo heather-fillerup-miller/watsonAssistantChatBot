@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
-    "start": "expo start",
+    "start": "expo start & node ./bin/www",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
@@ -14,6 +14,15 @@
     "preset": "jest-expo"
   },
   "dependencies": {
+    "cookie-parser": "~1.4.4",
+    "cors": "^2.8.5",
+    "debug": "~2.6.9",
+    "dotenv": "^16.0.1",
+    "express": "~4.16.1",
+    "http-errors": "~1.6.3",
+    "ibm-watson": "^7.0.0",
+    "jade": "~1.11.0",
+    "morgan": "~1.9.1",
     "@babel/preset-env": "^7.1.6",
     "@expo/react-native-action-sheet": "^3.13.0",
     "@expo/vector-icons": "^13.0.0",
