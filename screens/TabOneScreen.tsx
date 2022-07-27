@@ -1,23 +1,21 @@
-import React, { useContext, useEffect, useLayoutEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useState } from "react";
 import { Avatar } from "react-native-elements";
 import {
-  ActivityIndicator,
-  Button,
+  Image,
   StyleSheet,
-  TextInput,
-  TouchableOpacity,
 } from "react-native";
-import { Text, View } from "../components/Themed";
+import { View } from "../components/Themed";
 import { RootTabScreenProps } from "../types";
 import { GiftedChat } from "react-native-gifted-chat";
+import { buildMatchMemberExpression } from "@babel/types";
 
 export default function TabOneScreen({
   navigation,
 }: RootTabScreenProps<"TabOne">) {
-  const [loading, setLoading] = useState(true);
-  const [sessionTimeout, setSessionTimeout] = useState<number>(0); // Session timeout is currently set to 5 min
+  const [sessionTimeout, setSessionTimeout] = useState<number>(0); // Session timeout default is 5 min
   const [session, setSession] = useState<object | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
+  const [isTyping, setIsTyping] = useState(false);
 
   type sessionKey = keyof typeof session;
   const session_id = "session_id" as sessionKey;
@@ -26,34 +24,32 @@ export default function TabOneScreen({
   const text = "text" as messageKey;
 
   useLayoutEffect(() => {
-    console.log("useEffect layout: " + JSON.stringify(session));
     navigation.setOptions({
       headerRight: () => (
         <View style={{ marginLeft: 20 }}>
           <Avatar
+            size="small"
             rounded
             source={require("../assets/images/member1.png")}
           ></Avatar>
         </View>
       ),
       headerLeft: () => (
-        <View>
-          <TouchableOpacity
-            style={{
-              marginRight: 10,
-            }}
-            onPress={deleteSession}
-          >
-            {!session && <Text>Session Not Active</Text>}
-            {session && <Text>Delete SessionID</Text>}
-          </TouchableOpacity>
+        <View
+          style={{
+            marginRight: 10,
+          }}
+        >
+          <Image
+            style={{ width: 150, height: 44 }}
+            source={require("../assets/images/highmarkHealth.png")}
+          ></Image>
         </View>
       ),
     });
   }, [navigation, session]);
 
   useEffect(() => {
-    console.log("useEffect creation");
     fetchSession();
   }, []);
 
@@ -66,7 +62,7 @@ export default function TabOneScreen({
         );
         if (sessionRes.status === 200) {
           const sessionResult = await sessionRes.json();
-          //console.log("Result after call: " + JSON.stringify(sessionResult));
+
           setSession(sessionResult);
           let currentTime = Date.now();
           setSessionTimeout(currentTime);
@@ -76,83 +72,9 @@ export default function TabOneScreen({
         }
       } catch (error) {
         console.error(error);
-      } finally {
-        setLoading(false);
-      }
+      } 
     }
   }
-
-  // delete the watson session
-  const deleteSession = async () => {
-    if (session != null) {
-      type ObjectKey = keyof typeof session;
-      const session_id = "session_id" as ObjectKey;
-      if (session[session_id]) {
-        try {
-          await fetch(
-            `http://localhost:9000/assistant/delete?sessionId=${session[session_id]}`
-          );
-        } catch (error) {
-          console.error(error);
-        }
-        setSession(null);
-        setMessages([]);
-      }
-    }
-  };
-
-  // convert watson response into a message
-  const convertWatsonResponse = (watsonOutput: any) => {
-    console.log("Watson Generic" + JSON.stringify(watsonOutput["generic"]));
-    // Display each response_type and options
-    if (watsonOutput["generic"]) {
-      watsonOutput["generic"].forEach((response: any) => {
-        if (response["response_type"] === "text") {
-          let message = [
-            {
-              _id: Math.round(Math.random() * 1000000),
-              text: `${response["text"]}`,
-              createdAt: new Date(),
-              user: {
-                _id: 2,
-                name: "Watson Assistant",
-                avatar: require("../assets/images/watson.png"),
-              },
-            },
-          ];
-          setMessages((previousMessages) =>
-            GiftedChat.append(previousMessages, message)
-          );
-        }
-        if (response["response_type"] === "option") {
-          let options = response["options"].map((option: any) => ({
-            title: option["label"],
-            value: option["value"].input.text,
-          }));
-          console.log("Looking in Options" + JSON.stringify(options));
-          let message = [
-            {
-              _id: Math.round(Math.random() * 1000000),
-              text: `${response["title"]}`,
-              createdAt: new Date(),
-              quickReplies: {
-                type: "radio",
-                values: options,
-              },
-              user: {
-                _id: 2,
-                name: "Watson Assistant",
-                avatar: require("../assets/images/watson.png"),
-              },
-            },
-          ];
-          setMessages((previousMessages) =>
-            GiftedChat.append(previousMessages, message)
-          );
-        }
-      });
-    }
-  };
 
   // Get watson assistant reply
   async function fetchWatsonResponse(
@@ -161,7 +83,7 @@ export default function TabOneScreen({
     message: string
   ) {
     const timeout = Math.floor((Date.now() - sessionTime) / (1000 * 60));
-    console.log("Session Timeout: " + timeout);
+    // Session timeout default is 5 min
     if (timeout < 5) {
       try {
         const requestOptions = {
@@ -182,33 +104,99 @@ export default function TabOneScreen({
           const output = "output" as ObjectKey;
           let watsonOutput = watsonResult[output];
           if (watsonOutput) {
-            convertWatsonResponse(watsonOutput);
+            convertWatsonResponse(watsonOutput["generic"]);
           }
         }
       } catch (error) {
         console.error(error);
       }
     } else {
-      let message = [
-        {
-          _id: Math.round(Math.random() * 1000000),
-          text: "Sorry, your session expired... Creating a new session",
-          createdAt: new Date(),
-          user: {
-            _id: 2,
-            name: "Watson Assistant",
-            avatar: require("../assets/images/watson.png"),
-          },
-        },
-      ];
+      let message = buildWatsonMessage("Sorry, your session expired... Creating a new session", null);
       setMessages(message);
       setSession(null);
-      setLoading(true);
+      fetchSession();
     }
   }
 
+  // convert watson responses into messages one response type at a time
+  const convertWatsonResponse = (responseArray: any) => {
+    if (responseArray.length >= 1) {
+      var responseType = responseArray[0]['response_type'];
+  
+      if (responseType) {
+          switch (responseType) {
+            case "text":
+              setIsTyping(true);
+              let textMessage = buildWatsonMessage(`${responseArray[0]["text"]}`, null);
+              setTimeout(() => {
+                setIsTyping(false);
+                setMessages((previousMessages) =>
+                  GiftedChat.append(previousMessages, textMessage)
+                );
+                convertWatsonResponse(responseArray.slice(1));
+              }, 1500);
+              break;
+            case "option":
+              setIsTyping(true);
+              let options = responseArray[0]["options"].map((option: any) => ({
+                title: option["label"],
+                value: option["value"].input.text,
+              }));
+              let messageOptions = buildWatsonMessage(`${responseArray[0]["title"]}`, options)
+              setTimeout(() => {
+                setIsTyping(false);
+                setMessages((previousMessages) =>
+                  GiftedChat.append(previousMessages, messageOptions)
+                );
+                convertWatsonResponse(responseArray.slice(1));
+              }, 1500);
+              break;
+            case "pause":
+              setIsTyping(true);
+              setTimeout(() => {
+                setIsTyping(false);
+                convertWatsonResponse(responseArray.slice(1));
+              }, responseArray[0]["time"]);
+              break;
+            default:
+              console.log("No Response Types");
+              break;
+          }
+        }
+    }
+  };
+
+  const buildWatsonMessage = (text: string, options: any ) => {
+    let message = [
+      {
+        _id: Math.round(Math.random() * 1000000),
+        text: text,
+        createdAt: new Date(),
+        user: {
+          _id: 2,
+          name: "Watson Assistant",
+          avatar: require("../assets/images/watson.png"),
+        },
+      },
+    ];
+    if (options) {
+      let quickReplyMessage = message.map((item) => {
+        return {
+          ...item,
+          quickReplies: {
+            type: "radio",
+            values: options,
+          },
+        }
+      });
+      return quickReplyMessage;
+    } else {
+      return message;
+    }
+
+  }
+
   const sendMessage = (messages: any) => {
-    console.log(`sendMessage() messages: ${JSON.stringify(messages)}`);
     setMessages((previousMessages) =>
       GiftedChat.append(previousMessages, messages)
     );
@@ -222,7 +210,6 @@ export default function TabOneScreen({
   };
 
   const sendQuickReply = (quickReply: any) => {
-    console.log("Inside sendQuickReply value: " + JSON.stringify(quickReply));
     if (quickReply[0]["value"]) {
       let messages = [
         {
@@ -256,6 +243,7 @@ export default function TabOneScreen({
         onSend={(messages) => sendMessage(messages)}
         onQuickReply={(quickReply) => sendQuickReply(quickReply)}
         user={{ _id: 1 }}
+        isTyping={isTyping}
       />
     </View>
   );

@@ -67,7 +67,11 @@ function BottomTabNavigator() {
         component={TabOneScreen}
         options={({ navigation }: RootTabScreenProps<'TabOne'>) => ({
           title: 'Chat',
-          tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
+          tabBarIcon: ({ color }) => <AntDesign
+          name="customerservice"
+          size={24}
+          color={Colors[colorScheme].text}
+        />,
           headerRight: () => (
             <Pressable
               onPress={() => navigation.navigate('Modal')}
@@ -84,14 +88,14 @@ function BottomTabNavigator() {
           ),
         })}
       />
-      <BottomTab.Screen
+      {/* <BottomTab.Screen
         name="TabTwo"
         component={TabTwoScreen}
         options={{
           title: 'Tab Two',
           tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
         }}
-      />
+      /> */}
     </BottomTab.Navigator>
   );
 }
