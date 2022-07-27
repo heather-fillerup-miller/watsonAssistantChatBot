@@ -5,9 +5,9 @@
   "scripts": {
     "start": "expo start & nodemon ./bin/www",
     "android": "expo start --android",
-    "ios": "expo start --ios",
+    "ios": "expo start --ios & nodemon ./bin/www",
     "web": "expo start --web",
-    "server": "node ./bin/www",
+    "server": "nodemon ./bin/www",
     "eject": "expo eject",
     "test": "jest --watchAll"
   },
